@@ -6,11 +6,11 @@ import com.mainprofile.hr_system.entity.LeaveRequest;
 import com.mainprofile.hr_system.enums.LeaveStatus;
 import com.mainprofile.hr_system.repository.EmployeeRepository;
 import com.mainprofile.hr_system.repository.LeaveRequestRepository;
+import com.mainprofile.hr_system.config.CustomUserDetails;
 import com.mainprofile.hr_system.tenant.TenantContext;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -77,8 +77,8 @@ public class LeaveService {
 
     private String getCurrentUserEmail() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
-            return jwt.getClaimAsString("email");
+        if (auth != null && auth.getPrincipal() instanceof CustomUserDetails userDetails) {
+            return userDetails.getEmail();
         }
         return auth != null ? auth.getName() : "unknown";
     }

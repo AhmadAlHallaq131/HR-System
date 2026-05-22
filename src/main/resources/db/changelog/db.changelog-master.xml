@@ -7,5 +7,6 @@
 
     <include file="db/changelog/sql/V1__create_tables.sql"/>
     <include file="db/changelog/sql/V2__seed_data.sql"/>
+    <include file="db/changelog/sql/V3__add_users_table.sql"/>
 
 </databaseChangeLog>

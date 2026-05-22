@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 
 import java.util.Optional;
 
@@ -20,9 +19,8 @@ public class AuditConfig {
             if (auth == null || !auth.isAuthenticated()) {
                 return Optional.of("system");
             }
-            if (auth.getPrincipal() instanceof Jwt jwt) {
-                String email = jwt.getClaimAsString("email");
-                return Optional.ofNullable(email != null ? email : jwt.getSubject());
+            if (auth.getPrincipal() instanceof CustomUserDetails userDetails) {
+                return Optional.of(userDetails.getEmail());
             }
             return Optional.of(auth.getName());
         };

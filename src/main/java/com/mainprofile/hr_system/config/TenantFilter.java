@@ -6,7 +6,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -16,21 +15,18 @@ import java.io.IOException;
 public class TenantFilter extends OncePerRequestFilter {
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain chain) throws ServletException, IOException {
         try {
-            var authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
-                String tenantId = jwt.getClaimAsString("tenant_id");
-                if (tenantId != null) {
-                    TenantContext.setTenantId(tenantId);
-                }
+            var auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof CustomUserDetails userDetails) {
+                TenantContext.setTenantId(userDetails.getTenantId());
             }
-        } catch (Exception e) {
-            // Log but don't block - tenant context will be null
-        }
+        } catch (Exception ignored) {}
+
         try {
-            filterChain.doFilter(request, response);
+            chain.doFilter(request, response);
         } finally {
             TenantContext.clear();
         }
