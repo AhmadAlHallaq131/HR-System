@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout *)",
+      "Bash(curl *)",
+      "Bash(echo *)",
+      "Bash(===)",
+      "Bash(.\\mvnw.cmd *)"
+    ]
+  },
+  "$version": 3
+}
