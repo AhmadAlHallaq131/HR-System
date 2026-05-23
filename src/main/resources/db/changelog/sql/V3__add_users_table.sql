@@ -1,3 +1,5 @@
+-- liquibase formatted sql
+
 -- changeset hallaq:3
 
 CREATE TABLE users (

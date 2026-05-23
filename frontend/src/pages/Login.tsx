@@ -19,7 +19,12 @@ export default function Login() {
       const user = await login(form.username, form.password)
       setUser(user)
       toast.success(`Welcome back, ${user.username}!`)
-      navigate('/')
+      const roleRoutes: Record<string, string> = {
+        SUPER_ADMIN: '/admin/dashboard',
+        HR_MANAGER: '/hr/dashboard',
+        EMPLOYEE: '/employee/home',
+      }
+      navigate(roleRoutes[user.role] ?? '/')
     } catch {
       toast.error('Invalid username or password')
     } finally {
@@ -81,15 +86,9 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Demo credentials */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Demo credentials</p>
-            <div className="space-y-1 text-xs text-gray-600">
-              <div className="flex justify-between"><span>admin / admin123</span><span className="text-purple-600 font-medium">Admin</span></div>
-              <div className="flex justify-between"><span>hr_manager / hr123</span><span className="text-blue-600 font-medium">HR Manager</span></div>
-              <div className="flex justify-between"><span>employee / emp123</span><span className="text-gray-600 font-medium">Employee</span></div>
-            </div>
-          </div>
+          <p className="mt-5 text-center text-xs text-gray-400">
+            Contact your administrator for login credentials.
+          </p>
         </div>
       </div>
     </div>

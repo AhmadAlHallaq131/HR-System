@@ -18,7 +18,7 @@ export default function Badge({ value }: BadgeProps) {
   const cls = colorMap[value] ?? 'bg-gray-100 text-gray-600'
   return (
     <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}>
-      {value.replace('_', ' ')}
+      {value.replaceAll('_', ' ')}
     </span>
   )
 }

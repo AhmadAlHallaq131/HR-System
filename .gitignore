@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Auto-generated admin credentials (regenerated on every server start)
+admin_credentials.txt

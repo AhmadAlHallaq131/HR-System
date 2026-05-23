@@ -19,9 +19,11 @@ public class EmployeeResponse {
     private String lastName;
     private String email;
     private String jobTitle;
+    private String phone;
     private String status;
     private Long departmentId;
     private String departmentName;
+    private Long userId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -32,7 +34,9 @@ public class EmployeeResponse {
         response.setLastName(employee.getLastName());
         response.setEmail(employee.getEmail());
         response.setJobTitle(employee.getJobTitle());
+        response.setPhone(employee.getPhone());
         response.setStatus(employee.getStatus().name());
+        response.setUserId(employee.getUserId());
         response.setCreatedAt(employee.getCreatedAt());
         response.setUpdatedAt(employee.getUpdatedAt());
         

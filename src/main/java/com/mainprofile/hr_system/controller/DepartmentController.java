@@ -20,13 +20,13 @@ public class DepartmentController {
     private final DepartmentService departmentService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('HR_MANAGER','ADMIN')")
+    @PreAuthorize("hasAnyRole('HR_MANAGER','SUPER_ADMIN')")
     public ResponseEntity<List<DepartmentResponse>> getAll() {
         return ResponseEntity.ok(departmentService.getAll());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('EMPLOYEE','HR_MANAGER','ADMIN')")
+    @PreAuthorize("hasAnyRole('EMPLOYEE','HR_MANAGER','SUPER_ADMIN')")
     public ResponseEntity<DepartmentResponse> getOne(@PathVariable Long id) {
         return ResponseEntity.ok(departmentService.getById(id));
     }
@@ -46,7 +46,7 @@ public class DepartmentController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('HR_MANAGER')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         departmentService.delete(id);
         return ResponseEntity.noContent().build();

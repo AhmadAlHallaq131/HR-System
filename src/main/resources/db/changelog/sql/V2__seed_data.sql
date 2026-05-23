@@ -1,3 +1,5 @@
+-- liquibase formatted sql
+
 -- changeset hallaq:2
 
 -- TechCorp departments

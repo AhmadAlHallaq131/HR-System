@@ -20,7 +20,6 @@ public class Employee extends BaseEntity {
     @Column(name = "first_name", nullable = false)
     private String firstName;
 
-    @NotBlank
     @Column(name = "last_name", nullable = false)
     private String lastName;
 
@@ -32,6 +31,9 @@ public class Employee extends BaseEntity {
     @Column(name = "job_title")
     private String jobTitle;
 
+    @Column(name = "phone")
+    private String phone;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     @Builder.Default
@@ -40,6 +42,9 @@ public class Employee extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
     private Department department;
+
+    @Column(name = "user_id")
+    private Long userId;
 
     public enum EmployeeStatus {
         ACTIVE, INACTIVE, ON_LEAVE

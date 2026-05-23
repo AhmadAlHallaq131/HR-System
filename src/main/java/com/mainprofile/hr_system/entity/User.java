@@ -25,9 +25,19 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(name = "full_name")
+    private String fullName;
+
     @Column(nullable = false)
-    private String role; // ADMIN, HR_MANAGER, EMPLOYEE
+    private String role; // SUPER_ADMIN, HR_MANAGER, EMPLOYEE
 
     @Column(name = "tenant_id", nullable = false)
     private String tenantId;
+
+    @Column(name = "is_active", nullable = false)
+    @Builder.Default
+    private boolean active = true;
+
+    @Column(name = "employee_id")
+    private Long employeeId;
 }

@@ -1,12 +1,13 @@
 package com.mainprofile.hr_system.service;
 
+import com.mainprofile.hr_system.config.CustomUserDetails;
 import com.mainprofile.hr_system.dto.LeaveRequestDto;
+import com.mainprofile.hr_system.dto.LeaveResponse;
 import com.mainprofile.hr_system.entity.Employee;
 import com.mainprofile.hr_system.entity.LeaveRequest;
 import com.mainprofile.hr_system.enums.LeaveStatus;
 import com.mainprofile.hr_system.repository.EmployeeRepository;
 import com.mainprofile.hr_system.repository.LeaveRequestRepository;
-import com.mainprofile.hr_system.config.CustomUserDetails;
 import com.mainprofile.hr_system.tenant.TenantContext;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -25,26 +26,32 @@ public class LeaveService {
     private final EmployeeRepository employeeRepository;
 
     @Transactional(readOnly = true)
-    public List<LeaveRequest> getAll() {
-        String tenantId = TenantContext.getTenantId();
-        return leaveRepository.findAllByTenantId(tenantId);
+    public List<LeaveResponse> getAll() {
+        return leaveRepository.findAllByTenantId(TenantContext.getTenantId())
+                .stream()
+                .map(LeaveResponse::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<LeaveRequest> getMine() {
-        String email = getCurrentUserEmail();
-        String tenantId = TenantContext.getTenantId();
-        Employee me = employeeRepository.findAllByTenantId(tenantId).stream()
-                .filter(e -> e.getEmail().equals(email))
-                .findFirst()
-                .orElseThrow(() -> new EntityNotFoundException("Employee record not found for current user"));
-        return leaveRepository.findAllByEmployeeIdAndTenantId(me.getId(), tenantId);
+    public List<LeaveResponse> getMine() {
+        CustomUserDetails user = currentUser();
+        Long employeeId = user.getEmployeeId();
+        if (employeeId == null) throw new EntityNotFoundException("No employee record linked to your account");
+        return leaveRepository.findAllByEmployeeIdAndTenantId(employeeId, TenantContext.getTenantId())
+                .stream()
+                .map(LeaveResponse::from)
+                .toList();
     }
 
-    public LeaveRequest submit(LeaveRequestDto dto, Long employeeId) {
+    public LeaveResponse submit(LeaveRequestDto dto, Long employeeId) {
         String tenantId = TenantContext.getTenantId();
         Employee emp = employeeRepository.findByIdAndTenantId(employeeId, tenantId)
                 .orElseThrow(() -> new EntityNotFoundException("Employee not found: " + employeeId));
+
+        if (dto.getEndDate().isBefore(dto.getStartDate())) {
+            throw new IllegalArgumentException("End date cannot be before start date");
+        }
 
         LeaveRequest leave = LeaveRequest.builder()
                 .employee(emp)
@@ -52,34 +59,37 @@ public class LeaveService {
                 .endDate(dto.getEndDate())
                 .reason(dto.getReason())
                 .build();
-        return leaveRepository.save(leave);
+        return LeaveResponse.from(leaveRepository.save(leave));
     }
 
-    public LeaveRequest approve(Long id) {
+    public LeaveResponse approve(Long id) {
         LeaveRequest leave = getLeave(id);
+        if (leave.getStatus() != LeaveStatus.PENDING) {
+            throw new IllegalStateException("Only PENDING requests can be approved (current status: " + leave.getStatus() + ")");
+        }
         leave.setStatus(LeaveStatus.APPROVED);
-        leave.setReviewedBy(getCurrentUserEmail());
-        return leaveRepository.save(leave);
+        leave.setReviewedBy(currentUser().getEmail());
+        return LeaveResponse.from(leaveRepository.save(leave));
     }
 
-    public LeaveRequest reject(Long id) {
+    public LeaveResponse reject(Long id) {
         LeaveRequest leave = getLeave(id);
+        if (leave.getStatus() != LeaveStatus.PENDING) {
+            throw new IllegalStateException("Only PENDING requests can be rejected (current status: " + leave.getStatus() + ")");
+        }
         leave.setStatus(LeaveStatus.REJECTED);
-        leave.setReviewedBy(getCurrentUserEmail());
-        return leaveRepository.save(leave);
+        leave.setReviewedBy(currentUser().getEmail());
+        return LeaveResponse.from(leaveRepository.save(leave));
     }
 
     private LeaveRequest getLeave(Long id) {
-        String tenantId = TenantContext.getTenantId();
-        return leaveRepository.findByIdAndTenantId(id, tenantId)
+        return leaveRepository.findByIdAndTenantId(id, TenantContext.getTenantId())
                 .orElseThrow(() -> new EntityNotFoundException("Leave request not found: " + id));
     }
 
-    private String getCurrentUserEmail() {
+    private CustomUserDetails currentUser() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof CustomUserDetails userDetails) {
-            return userDetails.getEmail();
-        }
-        return auth != null ? auth.getName() : "unknown";
+        if (auth != null && auth.getPrincipal() instanceof CustomUserDetails u) return u;
+        throw new IllegalStateException("Not authenticated");
     }
 }

@@ -2,21 +2,21 @@ import { ReactNode, useEffect } from 'react'
 import { X } from 'lucide-react'
 
 interface ModalProps {
-  open: boolean
+  isOpen: boolean
   onClose: () => void
   title: string
   children: ReactNode
   size?: 'sm' | 'md' | 'lg'
 }
 
-export default function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  if (!open) return null
+  if (!isOpen) return null
 
   const widthClass = size === 'sm' ? 'max-w-sm' : size === 'lg' ? 'max-w-2xl' : 'max-w-lg'
 

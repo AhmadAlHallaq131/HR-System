@@ -8,5 +8,9 @@
     <include file="db/changelog/sql/V1__create_tables.sql"/>
     <include file="db/changelog/sql/V2__seed_data.sql"/>
     <include file="db/changelog/sql/V3__add_users_table.sql"/>
+    <include file="db/changelog/sql/V4__rework_schema.sql"/>
+    <include file="db/changelog/sql/V5__seed_super_admin.sql"/>
+    <include file="db/changelog/sql/V6__add_envers_sequence.sql"/>
+    <include file="db/changelog/sql/V7__fix_audit_tables.sql"/>
 
 </databaseChangeLog>

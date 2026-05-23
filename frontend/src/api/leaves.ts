@@ -1,27 +1,27 @@
 import client from './client'
-import { LeaveRequest, LeaveRequestDto } from '../types'
+import { LeaveResponse, LeaveRequestDto } from '../types'
 
-export const getLeaves = async (): Promise<LeaveRequest[]> => {
+export const getLeaves = async (): Promise<LeaveResponse[]> => {
   const { data } = await client.get('/leaves')
   return data
 }
 
-export const getMyLeaves = async (): Promise<LeaveRequest[]> => {
+export const getMyLeaves = async (): Promise<LeaveResponse[]> => {
   const { data } = await client.get('/leaves/my')
   return data
 }
 
-export const submitLeave = async (employeeId: number, dto: LeaveRequestDto): Promise<LeaveRequest> => {
+export const submitLeave = async (employeeId: number, dto: LeaveRequestDto): Promise<LeaveResponse> => {
   const { data } = await client.post(`/leaves/employee/${employeeId}`, dto)
   return data
 }
 
-export const approveLeave = async (id: number): Promise<LeaveRequest> => {
+export const approveLeave = async (id: number): Promise<LeaveResponse> => {
   const { data } = await client.put(`/leaves/${id}/approve`)
   return data
 }
 
-export const rejectLeave = async (id: number): Promise<LeaveRequest> => {
+export const rejectLeave = async (id: number): Promise<LeaveResponse> => {
   const { data } = await client.put(`/leaves/${id}/reject`)
   return data
 }

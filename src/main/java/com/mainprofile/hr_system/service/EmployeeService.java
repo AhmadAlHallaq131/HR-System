@@ -7,8 +7,8 @@ import com.mainprofile.hr_system.entity.Employee;
 import com.mainprofile.hr_system.repository.DepartmentRepository;
 import com.mainprofile.hr_system.repository.EmployeeRepository;
 import com.mainprofile.hr_system.tenant.TenantContext;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,41 +23,28 @@ public class EmployeeService {
     private final DepartmentRepository departmentRepository;
 
     @Transactional(readOnly = true)
-    @PreAuthorize("hasAnyRole('HR_MANAGER','ADMIN')")
     public List<EmployeeResponse> getAll() {
-        String tenantId = TenantContext.getTenantId();
-        return employeeRepository.findAllByTenantId(tenantId)
-                .stream()
-                .map(EmployeeResponse::from)
-                .toList();
+        return employeeRepository.findAllByTenantId(TenantContext.getTenantId())
+                .stream().map(EmployeeResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
-    @PreAuthorize("hasAnyRole('EMPLOYEE','HR_MANAGER','ADMIN')")
     public EmployeeResponse getById(Long id) {
-        String tenantId = TenantContext.getTenantId();
-        Employee employee = employeeRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new RuntimeException("Employee not found: " + id));
-        return EmployeeResponse.from(employee);
+        return EmployeeResponse.from(employeeRepository
+                .findByIdAndTenantId(id, TenantContext.getTenantId())
+                .orElseThrow(() -> new EntityNotFoundException("Employee not found: " + id)));
     }
 
     @Transactional(readOnly = true)
-    @PreAuthorize("hasAnyRole('HR_MANAGER','ADMIN')")
     public List<EmployeeResponse> search(String name) {
-        String tenantId = TenantContext.getTenantId();
-        return employeeRepository.searchByNameAndTenant(name, tenantId)
-                .stream()
-                .map(EmployeeResponse::from)
-                .toList();
+        return employeeRepository.searchByNameAndTenant(name, TenantContext.getTenantId())
+                .stream().map(EmployeeResponse::from).toList();
     }
 
-    @PreAuthorize("hasRole('HR_MANAGER')")
     public EmployeeResponse create(EmployeeRequest request) {
         String tenantId = TenantContext.getTenantId();
-
-        // Check if email already exists in tenant
         if (employeeRepository.existsByEmailAndTenantId(request.getEmail(), tenantId)) {
-            throw new RuntimeException("Email already exists: " + request.getEmail());
+            throw new IllegalArgumentException("Email already exists: " + request.getEmail());
         }
 
         Employee employee = Employee.builder()
@@ -65,53 +52,49 @@ public class EmployeeService {
                 .lastName(request.getLastName())
                 .email(request.getEmail())
                 .jobTitle(request.getJobTitle())
-                .status(request.getStatus() != null 
-                    ? Employee.EmployeeStatus.valueOf(request.getStatus()) 
-                    : Employee.EmployeeStatus.ACTIVE)
+                .status(request.getStatus() != null
+                        ? Employee.EmployeeStatus.valueOf(request.getStatus())
+                        : Employee.EmployeeStatus.ACTIVE)
                 .build();
 
-        // Set department if provided
         if (request.getDepartmentId() != null) {
-            Department department = departmentRepository.findByIdAndTenantId(request.getDepartmentId(), tenantId)
-                    .orElseThrow(() -> new RuntimeException("Department not found: " + request.getDepartmentId()));
-            employee.setDepartment(department);
+            Department dept = departmentRepository.findByIdAndTenantId(request.getDepartmentId(), tenantId)
+                    .orElseThrow(() -> new EntityNotFoundException("Department not found: " + request.getDepartmentId()));
+            employee.setDepartment(dept);
         }
-
-        Employee saved = employeeRepository.save(employee);
-        return EmployeeResponse.from(saved);
+        return EmployeeResponse.from(employeeRepository.save(employee));
     }
 
-    @PreAuthorize("hasRole('HR_MANAGER')")
     public EmployeeResponse update(Long id, EmployeeRequest request) {
         String tenantId = TenantContext.getTenantId();
-        
         Employee employee = employeeRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new RuntimeException("Employee not found: " + id));
-        
+                .orElseThrow(() -> new EntityNotFoundException("Employee not found: " + id));
+
         employee.setFirstName(request.getFirstName());
         employee.setLastName(request.getLastName());
+        employee.setEmail(request.getEmail());
         employee.setJobTitle(request.getJobTitle());
-        employee.setStatus(Employee.EmployeeStatus.valueOf(request.getStatus()));
-        
-        // Update department if changed
-        if (request.getDepartmentId() != null) {
-            if (!employee.getDepartment().getId().equals(request.getDepartmentId())) {
-                Department department = departmentRepository.findByIdAndTenantId(request.getDepartmentId(), tenantId)
-                        .orElseThrow(() -> new RuntimeException("Department not found: " + request.getDepartmentId()));
-                employee.setDepartment(department);
-            }
+        if (request.getStatus() != null) {
+            employee.setStatus(Employee.EmployeeStatus.valueOf(request.getStatus()));
         }
-        
-        Employee updated = employeeRepository.save(employee);
-        return EmployeeResponse.from(updated);
+
+        if (request.getDepartmentId() != null) {
+            Long currentDeptId = employee.getDepartment() != null ? employee.getDepartment().getId() : null;
+            if (!request.getDepartmentId().equals(currentDeptId)) {
+                Department dept = departmentRepository.findByIdAndTenantId(request.getDepartmentId(), tenantId)
+                        .orElseThrow(() -> new EntityNotFoundException("Department not found: " + request.getDepartmentId()));
+                employee.setDepartment(dept);
+            }
+        } else {
+            employee.setDepartment(null);
+        }
+
+        return EmployeeResponse.from(employeeRepository.save(employee));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
     public void delete(Long id) {
-        String tenantId = TenantContext.getTenantId();
-        Employee employee = employeeRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new RuntimeException("Employee not found: " + id));
+        Employee employee = employeeRepository.findByIdAndTenantId(id, TenantContext.getTenantId())
+                .orElseThrow(() -> new EntityNotFoundException("Employee not found: " + id));
         employeeRepository.delete(employee);
-
     }
 }

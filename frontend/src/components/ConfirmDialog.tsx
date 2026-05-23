@@ -11,7 +11,7 @@ interface ConfirmDialogProps {
 
 export default function ConfirmDialog({ open, onClose, onConfirm, title, message, loading }: ConfirmDialogProps) {
   return (
-    <Modal open={open} onClose={onClose} title={title} size="sm">
+    <Modal isOpen={open} onClose={onClose} title={title} size="sm">
       <p className="text-sm text-gray-600 mb-6">{message}</p>
       <div className="flex gap-3 justify-end">
         <button onClick={onClose} className="btn-secondary">Cancel</button>

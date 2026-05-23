@@ -21,7 +21,11 @@ public class TenantFilter extends OncePerRequestFilter {
         try {
             var auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth != null && auth.getPrincipal() instanceof CustomUserDetails userDetails) {
-                TenantContext.setTenantId(userDetails.getTenantId());
+                String tenantId = userDetails.getTenantId();
+                // SUPER_ADMIN has no tenant — skip setting context so they bypass tenant filters
+                if (tenantId != null && !tenantId.isBlank()) {
+                    TenantContext.setTenantId(tenantId);
+                }
             }
         } catch (Exception ignored) {}
 

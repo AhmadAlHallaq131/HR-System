@@ -1,306 +1,136 @@
-# HR SaaS Platform - How to Run
+# HR SaaS Platform — How to Run
 
-Quick start guide for running the Multi-Tenant HR Management System locally.
+Multi-Tenant HR Management System with React frontend and JWT authentication.
 
 ---
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
-
-| Software | Version | Download |
-|----------|---------|----------|
-| **Docker Desktop** | Latest | [docker.com](https://www.docker.com/products/docker-desktop/) |
-| **Java JDK** | 17+ | [adoptium.net](https://adoptium.net/) |
-| **Maven** | 3.8+ | [maven.apache.org](https://maven.apache.org/download.cgi) |
-| **Git** (optional) | Latest | [git-scm.com](https://git-scm.com/) |
-
-### Verify Installation
-
-```bash
-# Check Docker
-docker --version
-
-# Check Java
-java -version
-
-# Check Maven
-mvn --version
-```
+| Software | Version |
+|----------|---------|
+| **Docker Desktop** | Latest |
+| **Java JDK** | 17+ |
+| **Node.js** | 18+ |
 
 ---
 
-## Quick Start (5 Minutes)
+## Running the Project (Dev Mode)
 
-### Step 1: Clone or Download the Project
+The backend runs from IntelliJ, the frontend runs via `npm run dev`, and only the database runs in Docker.
 
-```bash
-git clone <repository-url>
-cd HR-System
-```
-
-### Step 2: Start Docker Containers
+### Step 1 — Start the Database
 
 ```bash
-# Start PostgreSQL and Keycloak
-docker compose up -d db keycloak
-
-# Wait 30 seconds for Keycloak to initialize
+docker compose up -d
 ```
 
-### Step 3: Run the Application
+This starts a PostgreSQL container on port **5555**.
 
-**Option A: Using Maven Wrapper (Recommended)**
+> If you've run the project before and need a clean start (e.g., after a migration change):
+> ```bash
+> docker compose down -v
+> docker compose up -d
+> ```
+
+### Step 2 — Start the Backend
+
+Open the project in **IntelliJ IDEA** and run `HrSystemApplication`. The backend starts on `http://localhost:8080`.
+
+On first startup, the app will:
+1. Run Liquibase migrations (creates tables)
+2. Seed 3 default users via `DataInitializer`
+
+### Step 3 — Start the Frontend
+
 ```bash
-# Windows
-mvnw.cmd spring-boot:run
-
-# Linux/Mac
-./mvnw spring-boot:run
+cd frontend
+npm install        # first time only
+npm run dev
 ```
 
-**Option B: Using Installed Maven**
-```bash
-mvn spring-boot:run
-```
-
-### Step 4: Verify Everything is Running
-
-| Service | URL | Status |
-|---------|-----|--------|
-| **Spring Boot API** | http://localhost:8080 | ✅ |
-| **Keycloak** | http://localhost:8180 | ✅ |
-| **PostgreSQL** | localhost:5432 | ✅ |
-
-**Test the API:**
-```bash
-curl http://localhost:8080/actuator/health
-```
+Opens at **http://localhost:5173**
 
 ---
 
-## Authentication Setup
+## Demo Credentials
 
-### Keycloak Realm
+| Username | Password | Role |
+|----------|----------|------|
+| `admin` | `admin123` | Admin |
+| `hr_manager` | `hr123` | HR Manager |
+| `employee` | `emp123` | Employee |
 
-The project includes a pre-configured Keycloak realm (`keycloak-realm.json`) that is automatically imported when you start the containers.
-
-### Test Users
-
-| Username | Password | Role | Tenant |
-|----------|----------|------|--------|
-| `hallaq.techcorp` | `password123` | HR_MANAGER | TechCorp |
-| `emp.techcorp` | `password123` | EMPLOYEE | TechCorp |
-| `sara.healthplus` | `password123` | HR_MANAGER | HealthPlus |
-| `super.admin` | `password123` | ADMIN | All Tenants |
-
-### Get a JWT Token
-
-```bash
-curl -X POST "http://localhost:8180/realms/hr-saas/protocol/openid-connect/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=password" \
-  -d "client_id=hr-saas-app" \
-  -d "client_secret=DrVjHvKjCDMwSKCVFjZsN16wLLmDpd8D" \
-  -d "username=hallaq.techcorp" \
-  -d "password=password123"
-```
-
-Copy the `access_token` from the response.
-
----
-
-## Testing the API
-
-### Using cURL
-
-**Get All Departments (HR_MANAGER or ADMIN only):**
-```bash
-curl http://localhost:8080/api/departments \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
-**Get All Employees:**
-```bash
-curl http://localhost:8080/api/employees \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
-**Create an Employee:**
-```bash
-curl -X POST "http://localhost:8080/api/employees" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "firstName": "John",
-    "lastName": "Doe",
-    "email": "john@techcorp.com",
-    "jobTitle": "Developer"
-  }'
-```
-
-### Using Postman
-
-1. **Import the collection** (optional): Create a new collection with your endpoints
-2. **Set up environment variables:**
-   - `base_url`: `http://localhost:8080`
-   - `kc_url`: `http://localhost:8180`
-   - `client_secret`: `DrVjHvKjCDMwSKCVFjZsN16wLLmDpd8D`
-   - `token`: (paste your access token)
-
-3. **Add Authorization header** to requests:
-   ```
-   Authorization: Bearer {{token}}
-   ```
+All demo users belong to the **TechCorp** tenant.
 
 ---
 
 ## API Endpoints
 
+All endpoints require `Authorization: Bearer <token>` header (except `/api/auth/login`).
+
+### Auth
+
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| POST | `/api/auth/login` | Public |
+
 ### Departments
 
-| Method | Endpoint | Roles | Description |
-|--------|----------|-------|-------------|
-| GET | `/api/departments` | EMPLOYEE, HR_MANAGER, ADMIN | Get all departments (tenant-scoped) |
-| GET | `/api/departments/{id}` | EMPLOYEE, HR_MANAGER, ADMIN | Get department by ID |
-| POST | `/api/departments` | HR_MANAGER | Create department |
-| PUT | `/api/departments/{id}` | HR_MANAGER | Update department |
-| DELETE | `/api/departments/{id}` | ADMIN | Delete department |
+| Method | Endpoint | Roles |
+|--------|----------|-------|
+| GET | `/api/departments` | HR_MANAGER, ADMIN |
+| GET | `/api/departments/{id}` | EMPLOYEE, HR_MANAGER, ADMIN |
+| POST | `/api/departments` | HR_MANAGER |
+| PUT | `/api/departments/{id}` | HR_MANAGER |
+| DELETE | `/api/departments/{id}` | ADMIN |
 
 ### Employees
 
-| Method | Endpoint | Roles | Description |
-|--------|----------|-------|-------------|
-| GET | `/api/employees` | HR_MANAGER, ADMIN | Get all employees (tenant-scoped) |
-| GET | `/api/employees/{id}` | EMPLOYEE, HR_MANAGER, ADMIN | Get employee by ID |
-| GET | `/api/employees/search?q=name` | HR_MANAGER, ADMIN | Search employees by name |
-| POST | `/api/employees` | HR_MANAGER | Create employee |
-| PUT | `/api/employees/{id}` | HR_MANAGER | Update employee |
-| DELETE | `/api/employees/{id}` | ADMIN | Delete employee |
+| Method | Endpoint | Roles |
+|--------|----------|-------|
+| GET | `/api/employees` | HR_MANAGER, ADMIN |
+| GET | `/api/employees/{id}` | EMPLOYEE, HR_MANAGER, ADMIN |
+| GET | `/api/employees/search?q=name` | HR_MANAGER, ADMIN |
+| POST | `/api/employees` | HR_MANAGER |
+| PUT | `/api/employees/{id}` | HR_MANAGER |
+| DELETE | `/api/employees/{id}` | ADMIN |
 
 ### Leave Requests
 
-| Method | Endpoint | Roles | Description |
-|--------|----------|-------|-------------|
-| GET | `/api/leaves` | HR_MANAGER, ADMIN | Get all leaves (tenant-scoped) |
-| GET | `/api/leaves/my` | ALL | Get my leave requests |
-| POST | `/api/leaves/employee/{id}` | EMPLOYEE, HR_MANAGER | Submit leave request |
-| PUT | `/api/leaves/{id}/approve` | HR_MANAGER | Approve leave |
-| PUT | `/api/leaves/{id}/reject` | HR_MANAGER | Reject leave |
-
----
-
-## Role-Based Access Control
-
-| Role | Permissions |
-|------|-------------|
-| **ADMIN** | Full access across all tenants. Can delete departments and employees. |
-| **HR_MANAGER** | Manage employees and departments within own tenant. Can approve/reject leaves. |
-| **EMPLOYEE** | View own profile and departments. Can submit leave requests. |
+| Method | Endpoint | Roles |
+|--------|----------|-------|
+| GET | `/api/leaves` | HR_MANAGER, ADMIN |
+| GET | `/api/leaves/my` | EMPLOYEE, HR_MANAGER, ADMIN |
+| POST | `/api/leaves/employee/{id}` | EMPLOYEE, HR_MANAGER |
+| PUT | `/api/leaves/{id}/approve` | HR_MANAGER |
+| PUT | `/api/leaves/{id}/reject` | HR_MANAGER |
 
 ---
 
 ## Troubleshooting
 
-### Application Won't Start
+### "Access denied" / 403 errors
+- Ensure you are logged in and the token is stored in localStorage.
+- Log out and log back in to get a fresh token.
 
-**Check Docker containers:**
+### "Authentication required" / 401 errors
+- Your token expired (default: 24 hours). Log out and log back in.
+
+### Database connection errors
 ```bash
+# Check the container is running
 docker ps
-```
 
-**View application logs:**
-```bash
-docker logs hr-system-server-1
-```
+# Verify DB is accepting connections
+docker exec hr_postgres psql -U postgres -d hr_saas_db -c "SELECT 1"
 
-### Connection Errors
-
-**PostgreSQL not accessible:**
-```bash
-# Restart database container
+# Restart the container
 docker compose restart db
-
-# Check database is running
-docker exec hr_postgres psql -U postgres -c "SELECT 1"
 ```
 
-**Keycloak not accessible:**
+### Clean reset
 ```bash
-# Wait for Keycloak to fully start (takes ~30 seconds)
-docker logs hr_keycloak --tail 20
-```
-
-### Authentication Errors (401/403)
-
-1. **Token expired** - Tokens expire after 5 minutes. Get a new token.
-2. **Wrong role** - Ensure your user has the required role for the endpoint.
-3. **Cross-tenant access** - You can only access data within your tenant.
-
-### Reset Everything
-
-```bash
-# Stop and remove all containers
-docker compose down
-
-# Remove database volume (WARNING: deletes all data)
-docker volume rm hr-system_postgres_data
-
-# Start fresh
+docker compose down -v    # removes all data
 docker compose up -d
+# then restart the backend from IntelliJ
 ```
-
----
-
-## Building for Production
-
-### Create JAR File
-
-```bash
-mvn clean package -DskipTests
-```
-
-### Run JAR
-
-```bash
-java -jar target/HR-System-0.0.1-SNAPSHOT.jar
-```
-
-### Docker Build
-
-```bash
-docker build -t hr-system:latest .
-docker run -p 8080:8080 hr-system:latest
-```
-
----
-
-## Project Structure
-
-```
-HR-System/
-├── compose.yaml              # Docker Compose configuration
-├── pom.xml                   # Maven dependencies
-├── src/main/java/.../
-│   ├── config/               # Security & tenant configuration
-│   ├── controller/           # REST API endpoints
-│   ├── service/              # Business logic
-│   ├── repository/           # Data access layer
-│   ├── entity/               # JPA entities
-│   ├── dto/                  # Request/Response objects
-│   └── exception/            # Error handling
-└── src/main/resources/
-    ├── application.properties # Application configuration
-    └── db/changelog/         # Database migrations
-```
-
----
-
-## Need Help?
-
-- Check the main [README.md](README.md) for project overview
-- Open an issue on GitHub for bugs or questions
-
----
-
-#### Happy Coding! 
