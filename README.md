@@ -1,5 +1,13 @@
 # HR SaaS Platform
 
+![Language](https://img.shields.io/badge/Language-Java-orange) 
+![Framework](https://img.shields.io/badge/Framework-Spring%20Boot-brightgreen) 
+![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20TypeScript-blue) 
+![Build](https://img.shields.io/badge/Build-Maven-red) 
+![Database](https://img.shields.io/badge/Database-PostgreSQL-4169E1)
+
+
+
 A full-stack, multi-tenant HR management system built with **Spring Boot** and **React**. Three completely separate portals — Super Admin, HR Manager, and Employee — each with its own dedicated UI and feature set.
 
 ---
