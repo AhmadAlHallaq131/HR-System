@@ -24,10 +24,15 @@ public class EmployeeResponse {
     private Long departmentId;
     private String departmentName;
     private Long userId;
+    private Boolean userActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     public static EmployeeResponse from(Employee employee) {
+        return from(employee, null);
+    }
+
+    public static EmployeeResponse from(Employee employee, Boolean userActive) {
         EmployeeResponse response = new EmployeeResponse();
         response.setId(employee.getId());
         response.setFirstName(employee.getFirstName());
@@ -37,14 +42,15 @@ public class EmployeeResponse {
         response.setPhone(employee.getPhone());
         response.setStatus(employee.getStatus().name());
         response.setUserId(employee.getUserId());
+        response.setUserActive(userActive);
         response.setCreatedAt(employee.getCreatedAt());
         response.setUpdatedAt(employee.getUpdatedAt());
-        
+
         if (employee.getDepartment() != null) {
             response.setDepartmentId(employee.getDepartment().getId());
             response.setDepartmentName(employee.getDepartment().getName());
         }
-        
+
         return response;
     }
 }

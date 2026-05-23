@@ -1,305 +1,313 @@
 # HR SaaS Platform
 
-A **multi-tenant HR Management System** built with Spring Boot 3, featuring role-based access control,
-tenant data isolation, and audit logging.
-
-![Java](https://img.shields.io/badge/Java-17-blue)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-green)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)
-![Keycloak](https://img.shields.io/badge/Keycloak-23.0-red)
-![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
+A full-stack, multi-tenant HR management system built with **Spring Boot** and **React**. Three completely separate portals — Super Admin, HR Manager, and Employee — each with its own dedicated UI and feature set.
 
 ---
 
-## 🚀 Features
-
-### Core Functionality
-- ✅ **Employee Management** - Create, update, delete employees
-- ✅ **Department Management** - Organize employees by departments
-- ✅ **Leave Request System** - Submit, approve, reject leave requests
-- ✅ **Search Functionality** - Find employees by name
-
-### Security & Multi-Tenancy
-- 🔐 **OAuth2 / OIDC Authentication** via Keycloak
-- 🔐 **JWT Token-Based Authorization**
-- 🔐 **Role-Based Access Control (RBAC)**
-  - `ADMIN` - Full system access across all tenants
-  - `HR_MANAGER` - Manage employees within own tenant
-  - `EMPLOYEE` - View profile and submit leaves
-- 🏢 **Multi-Tenant Data Isolation** - Each tenant's data is completely isolated
-
-### Enterprise Features
-- 📊 **Audit Trail** - Full history of changes using Hibernate Envers
-- 📝 **Automatic Audit Fields** - created_at, updated_at, created_by, updated_by
-- 🗄️ **Database Migrations** - Liquibase for version-controlled schema changes
-
----
-
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| **Backend** | Spring Boot 3.4.5, Java 17 |
-| **Security** | Spring Security 6, OAuth2 Resource Server, Keycloak |
-| **Database** | PostgreSQL 15 |
-| **ORM** | Spring Data JPA, Hibernate 6 |
-| **Audit** | Hibernate Envers, Spring Data Envers |
-| **Migrations** | Liquibase |
-| **Containerization** | Docker, Docker Compose |
+| Backend | Java 17 · Spring Boot 3.4 · Spring Security 6 · JWT |
+| ORM | Spring Data JPA · Hibernate 6 · Hibernate Envers (audit) |
+| Database | PostgreSQL 15 · Liquibase (migrations) |
+| Frontend | React 18 · TypeScript · Vite · Tailwind CSS |
+| Infrastructure | Docker · Docker Compose |
 
 ---
 
-## 📦 Quick Start
+## Architecture
 
-### Prerequisites
+The system is built around **three isolated roles**, each with its own portal and data scope:
 
-- Docker Desktop (running)
-- Java 17+
-- Maven 3.8+
+```
+SUPER_ADMIN  (platform level — no tenant)
+  └── Manages companies and HR Manager accounts
 
-### Run in 3 Steps
+HR_MANAGER   (tenant scoped)
+  └── Manages departments, employees, attendance, leave requests
 
-```bash
-# 1. Start infrastructure (PostgreSQL + Keycloak)
-docker compose up -d db keycloak
-
-# 2. Run the application
-mvnw.cmd spring-boot:run  # Windows
-./mvnw spring-boot:run   # Linux/Mac
-
-# 3. Test the API
-curl http://localhost:8080/actuator/health
+EMPLOYEE     (tenant scoped)
+  └── Views own profile, checks in/out, submits leave requests
 ```
 
-📖 **Detailed setup instructions:** See [HOW_TO_RUN.md](HOW_TO_RUN.md)
+### Multi-tenancy
+Every request is scoped to a tenant via a `TenantFilter` that reads the `tenantId` from the JWT and stores it in a `ThreadLocal`. All repository queries include a `tenant_id` condition automatically. `SUPER_ADMIN` bypasses this filter.
 
 ---
 
-## 🔑 Authentication
+## Features
 
-### Get Access Token
+### Super Admin
+- View all companies on the platform with employee counts
+- Create new company accounts (generates an HR Manager login)
+- Toggle company active/inactive status
+- Platform-level stats dashboard
 
-```bash
-curl -X POST "http://localhost:8180/realms/hr-saas/protocol/openid-connect/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=password&client_id=hr-saas-app&client_secret=DrVjHvKjCDMwSKCVFjZsN16wLLmDpd8D&username=hallaq.techcorp&password=password123"
-```
+### HR Manager
+- **Employees** — Create employee accounts (User + Employee linked atomically), activate/deactivate accounts, search and filter
+- **Departments** — Full CRUD for departments
+- **Attendance** — View daily attendance by date, today's summary (present / checked-in / checked-out / absent)
+- **Leave Requests** — Approve or reject pending requests, filter by status
+- **Dashboard** — Today's attendance summary + pending leave requests at a glance
 
-### Test Users
+### Employee
+- **Home** — Personal profile card + check-in / check-out widget + team grid with colleague status
+- **My Attendance** — Monthly history with duration tracking
+- **My Leaves** — Submit leave requests, view history and status
 
-| Username | Password | Role | Tenant |
-|----------|----------|------|--------|
-| `hallaq.techcorp` | `password123` | HR_MANAGER | TechCorp |
-| `emp.techcorp` | `password123` | EMPLOYEE | TechCorp |
-| `sara.healthplus` | `password123` | HR_MANAGER | HealthPlus |
-| `super.admin` | `password123` | ADMIN | All Tenants |
-
----
-
-## 📡 API Endpoints
-
-### Departments
-
-```http
-GET    /api/departments          # List all departments (tenant-scoped)
-GET    /api/departments/{id}     # Get department by ID
-POST   /api/departments          # Create department (HR_MANAGER)
-PUT    /api/departments/{id}     # Update department (HR_MANAGER)
-DELETE /api/departments/{id}     # Delete department (ADMIN)
-```
-
-### Employees
-
-```http
-GET    /api/employees            # List all employees (tenant-scoped)
-GET    /api/employees/{id}       # Get employee by ID
-GET    /api/employees/search?q=name  # Search by name
-POST   /api/employees            # Create employee (HR_MANAGER)
-PUT    /api/employees/{id}       # Update employee (HR_MANAGER)
-DELETE /api/employees/{id}       # Delete employee (ADMIN)
-```
-
-### Leave Requests
-
-```http
-GET    /api/leaves               # List all leaves (tenant-scoped)
-GET    /api/leaves/my            # Get my leaves
-POST   /api/leaves/employee/{id} # Submit leave request
-PUT    /api/leaves/{id}/approve  # Approve leave (HR_MANAGER)
-PUT    /api/leaves/{id}/reject   # Reject leave (HR_MANAGER)
-```
+### Security
+- JWT authentication (24-hour expiration)
+- BCrypt password hashing
+- Role-based endpoint protection via `@PreAuthorize`
+- JSON error responses for 401 and 403
+- Admin password rotated on **every server restart** — UUID password written to a local credentials file (never stored in code or DB permanently)
 
 ---
 
-## 🏗️ Architecture
-
-### Multi-Tenant Design
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    API Gateway / Load Balancer          │
-└─────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────┐
-│              Spring Boot Application                     │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │  TenantFilter (extracts tenant_id from JWT)     │    │
-│  └─────────────────────────────────────────────────┘    │
-│                            │                             │
-│  ┌─────────────────────────▼─────────────────────────┐  │
-│  │  Service Layer (business logic per tenant)        │  │
-│  └─────────────────────────┬─────────────────────────┘  │
-└────────────────────────────┼─────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────┐
-│              PostgreSQL Database                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │  TechCorp    │  │ HealthPlus   │  │   Other      │  │
-│  │  Data        │  │ Data         │  │   Tenants    │  │
-│  └──────────────┘  └──────────────┘  └──────────────┘  │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Tenant Isolation
-
-Every database query automatically filters by `tenant_id`:
-
-```java
-// Repository method - tenant filtering is automatic
-List<Employee> findAllByTenantId(String tenantId);
-
-// Service layer - gets tenant from ThreadLocal
-String tenantId = TenantContext.getTenantId();
-```
-
----
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 HR-System/
-├── compose.yaml                 # Docker Compose config
-├── Dockerfile                   # Docker build config
-├── keycloak-realm.json         # Pre-configured Keycloak realm
-├── pom.xml                     # Maven dependencies
-│
-├── src/main/java/.../hr_system/
-│   ├── HrSystemApplication.java
-│   ├── config/
-│   │   ├── SecurityConfig.java      # OAuth2 & JWT config
-│   │   ├── TenantFilter.java        # Tenant isolation filter
-│   │   └── AuditConfig.java         # Audit configuration
-│   ├── controller/                  # REST API endpoints
-│   ├── service/                     # Business logic
-│   ├── repository/                  # Data access (JPA)
-│   ├── entity/                      # JPA entities
-│   ├── dto/                         # Request/Response DTOs
-│   ├── enums/                       # Enumerations
-│   ├── exception/                   # Global error handling
-│   └── tenant/                      # Tenant context management
-│
-└── src/main/resources/
-    ├── application.properties       # App configuration
-    └── db/changelog/               # Liquibase migrations
-        ├── V1__create_tables.sql
-        └── V2__seed_data.sql
+├── src/main/java/               # Spring Boot backend
+│   └── com/mainprofile/hr_system/
+│       ├── config/              # Security, JWT, Tenant, Audit filters
+│       ├── controller/          # REST controllers
+│       ├── dto/                 # Request / Response DTOs
+│       ├── entity/              # JPA entities
+│       ├── enums/               # AttendanceStatus, LeaveStatus
+│       ├── exception/           # Global exception handler
+│       ├── repository/          # Spring Data repositories
+│       ├── service/             # Business logic
+│       └── tenant/              # TenantContext (ThreadLocal)
+├── src/main/resources/
+│   ├── application.properties   # Config (uses env vars with defaults)
+│   └── db/changelog/sql/        # Liquibase migrations V1–V7
+├── frontend/                    # React + TypeScript frontend
+│   └── src/
+│       ├── api/                 # Axios API clients per domain
+│       ├── components/          # Shared UI components
+│       ├── contexts/            # AuthContext
+│       ├── layouts/             # AdminLayout, HrLayout, EmployeeLayout
+│       ├── pages/               # Role-specific pages
+│       │   ├── admin/
+│       │   ├── hr/
+│       │   └── employee/
+│       └── types/               # TypeScript interfaces
+├── compose.yaml                 # Docker Compose (DB only for dev)
+├── Dockerfile                   # Backend Docker image
+├── .env.example                 # Environment variable template
+└── pom.xml
 ```
 
 ---
 
-## 🧪 Testing
+## Getting Started
 
-### Test Tenant Isolation
+### Prerequisites
+
+| Tool | Version |
+|------|---------|
+| Docker Desktop | Latest |
+| Java JDK | 17+ |
+| Node.js | 18+ |
+| IntelliJ IDEA | Any |
+
+### 1 — Clone and configure
 
 ```bash
-# 1. Create employee as TechCorp user
-curl -X POST "http://localhost:8080/api/employees" \
-  -H "Authorization: Bearer $TECHCORP_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"firstName":"Ahmad","lastName":"Ali","email":"ahmad@techcorp.com"}'
-
-# 2. Try to access with HealthPlus token - should return 404
-curl "http://localhost:8080/api/employees/1" \
-  -H "Authorization: Bearer $HEALTHPLUS_TOKEN"
+git clone https://github.com/your-username/HR-System.git
+cd HR-System
+cp .env.example .env
 ```
 
-### Test Role-Based Access
+Edit `.env` with your values (the defaults work for local development out of the box).
+
+### 2 — Start the database
 
 ```bash
-# EMPLOYEE trying to create employee - should return 403
-curl -X POST "http://localhost:8080/api/employees" \
-  -H "Authorization: Bearer $EMPLOYEE_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"firstName":"Test","lastName":"User"}'
+docker compose up -d
 ```
 
----
+Starts a PostgreSQL 15 container on port **5555**.
 
-## 📊 Database Schema
+> **Clean reset** (drop all data and remigrate):
+> ```bash
+> docker compose down -v && docker compose up -d
+> ```
 
-### Core Tables
+### 3 — Start the backend
 
-- `departments` - Department information
-- `employees` - Employee records
-- `leave_requests` - Leave request tracking
+Open the project in **IntelliJ IDEA** and run `HrSystemApplication`.
 
-### Audit Tables (Auto-generated)
+On first startup Liquibase runs all migrations (V1–V7) and creates the schema. The `DataInitializer` then generates a UUID admin password and writes it to the credentials file.
 
-- `departments_aud` - Department change history
-- `employees_aud` - Employee change history
-- `leave_requests_aud` - Leave request change history
-- `revinfo` - Revision information for auditing
+Backend runs at `http://localhost:8080`.
 
----
+### 4 — Get the admin password
 
-## 🔧 Configuration
+Open `admin_credentials.txt` (created next to the project root). It contains:
 
-### Environment Variables
+```
+================================================
+  HR System - Admin Credentials
+================================================
+  Generated : 2025-05-23 14:03:17
+  Username  : admin
+  Password  : f3a9c2d1-7b8e-4f2a-9c1d-0e5f6a7b8c9d
+================================================
+  This file is overwritten on every server restart.
+  Keep it secure. Do not commit it to version control.
+================================================
+```
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SPRING_DATASOURCE_URL` | Database connection URL | `jdbc:postgresql://localhost:5432/hr_saas_db` |
-| `SPRING_DATASOURCE_USERNAME` | Database username | `postgres` |
-| `SPRING_DATASOURCE_PASSWORD` | Database password | `postgres123` |
-| `SERVER_PORT` | HTTP server port | `8080` |
+> The password changes on **every restart**. Old sessions stop working immediately.
 
-### Keycloak Configuration
-
-- **Realm:** `hr-saas`
-- **Client ID:** `hr-saas-app`
-- **Client Secret:** `DrVjHvKjCDMwSKCVFjZsN16wLLmDpd8D`
-- **Issuer URI:** `http://localhost:8180/realms/hr-saas`
-
----
-
-## 🚢 Deployment
-
-### Docker Build
+### 5 — Start the frontend
 
 ```bash
-docker build -t hr-system:latest .
-docker run -p 8080:8080 \
-  -e SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/hr_saas_db \
-  hr-system:latest
+cd frontend
+npm install
+npm run dev
 ```
 
-### Production Considerations
-
-- ✅ Enable HTTPS for Keycloak and API
-- ✅ Use environment-specific configuration
-- ✅ Set strong database passwords
-- ✅ Configure proper logging and monitoring
-- ✅ Enable connection pooling tuning
-- ✅ Set up backup and recovery procedures
+Frontend runs at `http://localhost:5173`.
 
 ---
 
-## 📝 License
+## Usage Flow
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+```
+1. Login as admin → Create a company (generates HR Manager credentials)
+2. Share HR Manager credentials with the company
+3. HR Manager logs in → Creates departments and employee accounts
+4. Share employee credentials with employees
+5. Employees log in → Check in/out, view team, submit leave requests
+6. HR Manager reviews leave requests, monitors attendance
+```
 
 ---
 
-⭐ **Star this repo if you find it useful!**
+## API Reference
+
+All endpoints require `Authorization: Bearer <token>` except `/api/auth/login`.
+
+### Auth
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| POST | `/api/auth/login` | Public |
+
+### Admin
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| GET | `/api/admin/companies` | SUPER_ADMIN |
+| POST | `/api/admin/companies` | SUPER_ADMIN |
+| GET | `/api/admin/companies/{id}` | SUPER_ADMIN |
+| PUT | `/api/admin/companies/{id}` | SUPER_ADMIN |
+| GET | `/api/admin/stats` | SUPER_ADMIN |
+
+### Employees
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| GET | `/api/employees` | HR_MANAGER |
+| GET | `/api/employees/{id}` | HR_MANAGER, EMPLOYEE |
+| GET | `/api/employees/search?q=` | HR_MANAGER |
+| POST | `/api/employees` | HR_MANAGER |
+| PUT | `/api/employees/{id}` | HR_MANAGER |
+| DELETE | `/api/employees/{id}` | HR_MANAGER |
+
+### Users (Account management)
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| POST | `/api/users` | HR_MANAGER |
+| PUT | `/api/users/{id}/activate` | HR_MANAGER |
+| PUT | `/api/users/{id}/deactivate` | HR_MANAGER |
+| PUT | `/api/users/{id}/reset-password` | HR_MANAGER |
+
+### Departments
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| GET | `/api/departments` | HR_MANAGER |
+| GET | `/api/departments/{id}` | HR_MANAGER, EMPLOYEE |
+| POST | `/api/departments` | HR_MANAGER |
+| PUT | `/api/departments/{id}` | HR_MANAGER |
+| DELETE | `/api/departments/{id}` | HR_MANAGER |
+
+### Attendance
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| POST | `/api/attendance/check-in` | EMPLOYEE |
+| POST | `/api/attendance/check-out` | EMPLOYEE |
+| GET | `/api/attendance/today` | EMPLOYEE |
+| GET | `/api/attendance/my?year=&month=` | EMPLOYEE |
+| GET | `/api/attendance?date=&employeeId=` | HR_MANAGER |
+| GET | `/api/attendance/today/summary` | HR_MANAGER |
+
+### Leave Requests
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| GET | `/api/leaves` | HR_MANAGER |
+| GET | `/api/leaves/my` | EMPLOYEE |
+| POST | `/api/leaves/employee/{id}` | EMPLOYEE |
+| PUT | `/api/leaves/{id}/approve` | HR_MANAGER |
+| PUT | `/api/leaves/{id}/reject` | HR_MANAGER |
+
+### Me (Employee self-service)
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| GET | `/api/me/profile` | EMPLOYEE |
+| GET | `/api/me/team` | EMPLOYEE |
+
+---
+
+## Database Migrations
+
+| Version | Description |
+|---------|-------------|
+| V1 | Create core tables: departments, employees, leave_requests, Envers audit tables |
+| V2 | Seed initial data |
+| V3 | Add users table |
+| V4 | Add companies, attendance_records; extend users and employees tables |
+| V5 | Seed super admin user |
+| V6 | Add `revinfo_seq` sequence for Hibernate Envers |
+| V7 | Add missing audit columns to `_aud` tables |
+
+---
+
+## Environment Variables
+
+Copy `.env.example` to `.env` and fill in your values.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DB_HOST` | `localhost` | PostgreSQL host |
+| `DB_PORT` | `5555` | PostgreSQL port |
+| `DB_NAME` | `hr_saas_db` | Database name |
+| `DB_USERNAME` | `postgres` | DB username |
+| `DB_PASSWORD` | `postgres123` | DB password |
+| `JWT_SECRET` | *(built-in)* | Base64-encoded JWT signing key |
+| `JWT_EXPIRATION` | `86400000` | Token lifetime in ms (24 hours) |
+| `ADMIN_CREDENTIALS_FILE` | `./admin_credentials.txt` | Path where admin password is written |
+| `SERVER_PORT` | `8080` | Backend port |
+
+---
+
+## Troubleshooting
+
+**401 — Authentication required**
+Token expired (24h). Log out and log back in.
+
+**403 — Access denied**
+Your role doesn't have permission. Make sure you're logged in with the right account.
+
+**500 on first start after DB wipe**
+The backend must be restarted after `docker compose down -v`. Liquibase only runs at Spring Boot startup.
+
+**Database connection errors**
+```bash
+docker ps                          # check container is running
+docker compose restart db          # restart the container
+docker compose down -v && docker compose up -d   # full reset
+```
+
+---

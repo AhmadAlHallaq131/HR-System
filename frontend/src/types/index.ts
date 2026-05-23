@@ -19,6 +19,7 @@ export interface Employee {
   departmentId: number | null
   departmentName: string | null
   userId: number | null
+  userActive: boolean | null
   createdAt: string
   updatedAt: string
 }

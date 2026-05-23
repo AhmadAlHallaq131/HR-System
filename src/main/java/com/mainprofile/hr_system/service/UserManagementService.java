@@ -89,6 +89,15 @@ public class UserManagementService {
         userRepository.save(user);
     }
 
+    public void activateUser(Long userId) {
+        String tenantId = TenantContext.getTenantId();
+        User user = userRepository.findById(userId)
+                .filter(u -> tenantId.equals(u.getTenantId()))
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+        user.setActive(true);
+        userRepository.save(user);
+    }
+
     public void resetPassword(Long userId, String newPassword) {
         String tenantId = TenantContext.getTenantId();
         User user = userRepository.findById(userId)

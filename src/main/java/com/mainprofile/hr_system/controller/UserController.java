@@ -32,6 +32,13 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/{id}/activate")
+    @PreAuthorize("hasRole('HR_MANAGER')")
+    public ResponseEntity<Void> activate(@PathVariable Long id) {
+        userManagementService.activateUser(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{id}/reset-password")
     @PreAuthorize("hasRole('HR_MANAGER')")
     public ResponseEntity<Void> resetPassword(@PathVariable Long id, @RequestBody Map<String, String> body) {

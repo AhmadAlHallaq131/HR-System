@@ -4,8 +4,10 @@ import com.mainprofile.hr_system.dto.EmployeeRequest;
 import com.mainprofile.hr_system.dto.EmployeeResponse;
 import com.mainprofile.hr_system.entity.Department;
 import com.mainprofile.hr_system.entity.Employee;
+import com.mainprofile.hr_system.entity.User;
 import com.mainprofile.hr_system.repository.DepartmentRepository;
 import com.mainprofile.hr_system.repository.EmployeeRepository;
+import com.mainprofile.hr_system.repository.UserRepository;
 import com.mainprofile.hr_system.tenant.TenantContext;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,18 +25,32 @@ public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final DepartmentRepository departmentRepository;
+    private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
     public List<EmployeeResponse> getAll() {
-        return employeeRepository.findAllByTenantId(TenantContext.getTenantId())
-                .stream().map(EmployeeResponse::from).toList();
+        String tenantId = TenantContext.getTenantId();
+        List<Employee> employees = employeeRepository.findAllByTenantId(tenantId);
+
+        // Build userId -> isActive map in one query (avoids N+1)
+        Map<Long, Boolean> userActiveMap = userRepository.findAllByTenantId(tenantId)
+                .stream().collect(Collectors.toMap(User::getId, User::isActive));
+
+        return employees.stream()
+                .map(e -> EmployeeResponse.from(e,
+                        e.getUserId() != null ? userActiveMap.get(e.getUserId()) : null))
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public EmployeeResponse getById(Long id) {
-        return EmployeeResponse.from(employeeRepository
-                .findByIdAndTenantId(id, TenantContext.getTenantId())
-                .orElseThrow(() -> new EntityNotFoundException("Employee not found: " + id)));
+        String tenantId = TenantContext.getTenantId();
+        Employee emp = employeeRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new EntityNotFoundException("Employee not found: " + id));
+        Boolean userActive = emp.getUserId() != null
+                ? userRepository.findById(emp.getUserId()).map(User::isActive).orElse(null)
+                : null;
+        return EmployeeResponse.from(emp, userActive);
     }
 
     @Transactional(readOnly = true)
